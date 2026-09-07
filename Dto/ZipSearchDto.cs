@@ -13,4 +13,7 @@ public class ZipSearchDto
     public string? DoNo { get; set; }
 
      public string? DoName { get; set; }
+
+     public int PageIndex { get; set; } = 1;
+     public int PageSize { get; set; } = 10;
 }
