@@ -10,4 +10,7 @@ public class Zip
     public string ZoNo { get; set; } = string.Empty;
     public string DoNo { get; set; } = string.Empty;
 
+    public County? County { get; set; }
+    public Zo? Zo { get; set; }
+    public DistrictOffice? DistrictOffice { get; set; }
 }
