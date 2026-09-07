@@ -4,6 +4,6 @@ namespace MST_4G.Services;
 
 public interface IZipService
 {
-    Task<IEnumerable<ZipReadDto>> SearchZipsAsync(ZipSearchDto searchDto);
-    Task<ZipReadDto?>GetByZipNoAsync(string zipNo);
+    Task<PagedResult<ZipReadDto>> SearchZipsAsync(ZipSearchDto searchDto);
+Task<ZipReadDto?> GetByZipNoAsync(string zipNo);
 }
