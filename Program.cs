@@ -1,13 +1,15 @@
 using Microsoft.EntityFrameworkCore;
-using Swashbuckle.AspNetCore.SwaggerUI;
 using MST_4G.Data;
+using MST_4G.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseInMemoryDatabase("ZipDb"));
+builder.Services.AddScoped<IZipService, ZipService>();
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddCors(options =>
 {
@@ -17,9 +19,8 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
-});
+}); // The one that will communicate with the React app
 
-// <snippet_UseSwagger>
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -30,7 +31,6 @@ if (app.Environment.IsDevelopment())
         options.SwaggerEndpoint("/openapi/v1.json", "v1");
     });
 }
-// </snippet_UseSwagger>
 
 app.UseHttpsRedirection();
 
