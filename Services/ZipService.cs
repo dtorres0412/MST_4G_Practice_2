@@ -135,4 +135,36 @@ public class ZipService(AppDbContext context) : IZipService
         var result = await GetByZipNoAsync(zip.ZipNo);
         return result!;
     }
+
+    public async Task<ZipReadDto?> UpdateZipAsync(ZipUpdateDto updateDto)
+    {
+        var existingZip = await context.Zip
+            .FirstOrDefaultAsync(z => z.ZipNo == updateDto.ZipNo.Trim());
+
+        if (existingZip == null) return null;
+
+        var county = await context.County.FirstOrDefaultAsync(c => c.CountyId == updateDto.CountyId);
+        var zo = await context.Zo.FirstOrDefaultAsync(z => z.ZoId == updateDto.ZoId);
+        var districtOffice = await context.DistrictOffice.FirstOrDefaultAsync(d => d.DoId == updateDto.DoId);
+
+        existingZip.ZipName = updateDto.ZipName.Trim();
+        existingZip.EffDateFrom = updateDto.EffDateFrom;
+        existingZip.EffDateTo = updateDto.EffDateTo;
+
+        existingZip.CountyId = updateDto.CountyId;
+        existingZip.ZoId = updateDto.ZoId;
+        existingZip.DoId = updateDto.DoId;
+
+        existingZip.CountyNo = county?.CountyNo;
+        existingZip.ZoNo = zo?.ZoNo;
+        existingZip.DoNo = districtOffice?.DoNo;
+
+        await context.SaveChangesAsync();
+
+        return await context.Zip
+            .AsNoTracking()
+            .Where(z => z.ZipId == existingZip.ZipId)
+            .Select(ToDto)
+            .FirstOrDefaultAsync();
+    }
 }
