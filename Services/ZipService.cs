@@ -116,25 +116,39 @@ public class ZipService(AppDbContext context) : IZipService
         DoName = z.DistrictOffice.DoName ?? string.Empty
     };
 
-    public async Task<ZipReadDto>CreateZipAsync(ZipCreateDto createDto)
+    public async Task<ZipReadDto> CreateZipAsync(ZipCreateDto createDto)
+{
+    var county = await context.County.FirstOrDefaultAsync(c => c.CountyId == createDto.CountyId);
+    var zo = await context.Zo.FirstOrDefaultAsync(z => z.ZoId == createDto.ZoId);
+    var districtOffice = await context.DistrictOffice.FirstOrDefaultAsync(d => d.DoId == createDto.DoId);
+
+    var zip = new Zip
     {
-        var zip = new Zip
-        {
-            ZipNo = createDto.ZipNo.Trim(),
-            ZipName = createDto.ZipName.Trim(),
-            EffDateFrom = createDto.EffDateFrom,
-            EffDateTo = createDto.EffDateTo,
-            CountyId = createDto.CountyId,
-            ZoId = createDto.ZoId,
-            DoId = createDto.DoId
-        };
+        ZipNo = createDto.ZipNo.Trim(),
+        ZipName = createDto.ZipName.Trim(),
+        EffDateFrom = createDto.EffDateFrom,
+        EffDateTo = createDto.EffDateTo,
 
-        context.Zip.Add(zip);
-        await context.SaveChangesAsync();
+        CountyId = createDto.CountyId,
+        ZoId = createDto.ZoId,
+        DoId = createDto.DoId,
 
-        var result = await GetByZipNoAsync(zip.ZipNo);
-        return result!;
-    }
+        CountyNo = county?.CountyNo,
+        ZoNo = zo?.ZoNo,
+        DoNo = districtOffice?.DoNo
+    };
+
+    context.Zip.Add(zip);
+    await context.SaveChangesAsync();
+
+    var result = await context.Zip
+        .AsNoTracking()
+        .Where(z => z.ZipId == zip.ZipId)
+        .Select(ToDto)
+        .FirstOrDefaultAsync();
+
+    return result!;
+}
 
     public async Task<ZipReadDto?> UpdateZipAsync(ZipUpdateDto updateDto)
     {
