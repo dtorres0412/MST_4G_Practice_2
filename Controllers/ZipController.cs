@@ -48,4 +48,22 @@ public class ZipController(IZipService zipService) : ControllerBase
             return BadRequest(ex.Message);
         }
     }
+
+    [HttpPut("update")]
+    public async Task<ActionResult<ZipReadDto>> UpdateZip([FromBody] ZipUpdateDto updateDto)
+    {
+        try
+        {
+            var result = await zipService.UpdateZipAsync(updateDto);
+
+            if (result == null)
+                return NotFound($"Zip record with ZipNo '{updateDto.ZipNo}' not found.");
+
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
 }
