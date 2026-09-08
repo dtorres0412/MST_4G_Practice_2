@@ -33,4 +33,19 @@ public class ZipController(IZipService zipService) : ControllerBase
         var fileName = $"Zip_Maintenance_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
         return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
+
+    [HttpPost("create")]
+    public async Task<ActionResult<ZipReadDto>> CreateZip([FromBody] ZipCreateDto createDto)
+    {
+        try
+        {
+            var result = await zipService.CreateZipAsync(createDto);
+
+            return CreatedAtAction(nameof(GetByZipNo), new { zipNo = result?.ZipNo }, result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
 }
