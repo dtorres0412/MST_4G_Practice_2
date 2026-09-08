@@ -115,4 +115,24 @@ public class ZipService(AppDbContext context) : IZipService
         DoNo = z.DistrictOffice.DoNo ?? string.Empty,
         DoName = z.DistrictOffice.DoName ?? string.Empty
     };
+
+    public async Task<ZipReadDto>CreateZipAsync(ZipCreateDto createDto)
+    {
+        var zip = new Zip
+        {
+            ZipNo = createDto.ZipNo.Trim(),
+            ZipName = createDto.ZipName.Trim(),
+            EffDateFrom = createDto.EffDateFrom,
+            EffDateTo = createDto.EffDateTo,
+            CountyId = createDto.CountyId,
+            ZoId = createDto.ZoId,
+            DoId = createDto.DoId
+        };
+
+        context.Zip.Add(zip);
+        await context.SaveChangesAsync();
+
+        var result = await GetByZipNoAsync(zip.ZipNo);
+        return result!;
+    }
 }
