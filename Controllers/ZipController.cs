@@ -25,4 +25,12 @@ public class ZipController(IZipService zipService) : ControllerBase
 
         return Ok(zip);
     }
+
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportZips([FromQuery] ZipSearchDto searchDto)
+    {
+        var fileBytes = await zipService.ExportZipsToExcelAsync(searchDto);
+        var fileName = $"Zip_Maintenance_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+        return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+    }
 }
