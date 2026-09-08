@@ -28,6 +28,15 @@ public class Zip
     [Column("do_id")]
     public int DoId { get; set; }
 
+    [Column("county_no")]
+    public string? CountyNo { get; set; }
+
+    [Column("zo_no")]
+    public string? ZoNo { get; set; }
+
+    [Column("do_no")]
+    public string? DoNo { get; set; }
+
     public County? County { get; set; }
     public Zo? Zo { get; set; }
     public DistrictOffice? DistrictOffice { get; set; }
