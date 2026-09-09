@@ -10,4 +10,5 @@ public interface IZipService
     Task<ZipReadDto> CreateZipAsync(ZipCreateDto createDto);
     Task<ZipReadDto?> UpdateZipAsync(ZipUpdateDto updateDto);
     Task<bool> DeleteZipAsync(int zipId);
+    Task<bool> ProcessResumeAsync(ZipProcessResumeDto payload);
 }
