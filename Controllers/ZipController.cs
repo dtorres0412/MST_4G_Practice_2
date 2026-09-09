@@ -66,4 +66,16 @@ public class ZipController(IZipService zipService) : ControllerBase
             return BadRequest(ex.Message);
         }
     }
+
+    [HttpDelete("{zipId:Int}")]
+    public async Task<IActionResult>DeleteZip(int zipId)
+    {
+        var isDeleted = await zipService.DeleteZipAsync(zipId);
+        if(!isDeleted)
+        {
+            return NotFound($"ZipId {zipId} record not found.");
+        }
+
+        return NoContent();
+    }
 }
