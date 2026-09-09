@@ -181,4 +181,19 @@ public class ZipService(AppDbContext context) : IZipService
             .Select(ToDto)
             .FirstOrDefaultAsync();
     }
+
+    public async Task<bool> DeleteZipAsync(int zipId)
+    {
+        var zipRecord = await context.Zip.FindAsync(zipId);
+
+        if (zipRecord == null)
+        {
+            return false;
+        }
+
+        context.Zip.Remove(zipRecord);
+        await context.SaveChangesAsync();
+
+        return true;
+    }
 }
