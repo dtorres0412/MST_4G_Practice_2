@@ -196,4 +196,98 @@ public class ZipService(AppDbContext context) : IZipService
 
         return true;
     }
+
+    public async Task<bool> ProcessResumeAsync(ZipProcessResumeDto payload)
+    {
+        var newItem = payload.NewItem;
+        var oriItem = payload.OriItem;
+        var vitaeList = payload.VitaeList;
+
+        if (oriItem != null)
+        {
+            bool isFoundInVitaeList = false;
+            foreach (var item in vitaeList)
+            {
+                if (item.ZipId == oriItem.ZipId)
+                {
+                    isFoundInVitaeList = true;
+                    break;
+                }
+            }
+
+            if (isFoundInVitaeList == false)
+            {
+                return false;
+            }
+
+            var zipRecordInDatabase = await context.Zip
+                .FirstOrDefaultAsync(z => z.ZipId == oriItem.ZipId);
+
+            if (zipRecordInDatabase == null)
+            {
+                return false;
+            }
+        }
+
+        var dateFromUnspecified = newItem.EffDateFrom.Date;
+        var newStartDate = DateTime.SpecifyKind(dateFromUnspecified, DateTimeKind.Utc);
+
+        var maxDateUnspecified = new DateTime(9999, 12, 31);
+        var maxDate = DateTime.SpecifyKind(maxDateUnspecified, DateTimeKind.Utc);
+
+        var activeZip = await context.Zip
+            .FirstOrDefaultAsync(z => z.ZipNo == newItem.ZipNo.Trim() && z.EffDateTo == maxDate);
+
+        if (activeZip != null)
+        {
+            activeZip.EffDateTo = newStartDate.AddDays(-1);
+        }
+
+        var county = await context.County.FirstOrDefaultAsync(c => c.CountyId == newItem.CountyId);
+        var zo = await context.Zo.FirstOrDefaultAsync(z => z.ZoId == newItem.ZoId);
+        var districtOffice = await context.DistrictOffice.FirstOrDefaultAsync(d => d.DoId == newItem.DoId);
+
+        var newZip = new Zip();
+        
+        newZip.ZipNo = newItem.ZipNo.Trim();
+        newZip.ZipName = newItem.ZipName.Trim();
+        newZip.EffDateFrom = newStartDate;
+        newZip.EffDateTo = maxDate;
+        
+        newZip.CountyId = newItem.CountyId;
+        newZip.ZoId = newItem.ZoId;
+        newZip.DoId = newItem.DoId;
+
+        if (county != null)
+        {
+            newZip.CountyNo = county.CountyNo;
+        }
+        else
+        {
+            newZip.CountyNo = null;
+        }
+
+        if (zo != null)
+        {
+            newZip.ZoNo = zo.ZoNo;
+        }
+        else
+        {
+            newZip.ZoNo = null;
+        }
+
+        if (districtOffice != null)
+        {
+            newZip.DoNo = districtOffice.DoNo;
+        }
+        else
+        {
+            newZip.DoNo = null;
+        }
+
+        context.Zip.Add(newZip);
+        await context.SaveChangesAsync();
+
+        return true;
+    }
 }
