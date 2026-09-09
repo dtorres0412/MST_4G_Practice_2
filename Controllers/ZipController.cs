@@ -78,4 +78,16 @@ public class ZipController(IZipService zipService) : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPost("process-resume")]
+    public async Task<IActionResult> ProcessResume([FromBody] ZipProcessResumeDto payload)
+    {
+        var isSuccess = await zipService.ProcessResumeAsync(payload);
+        if (!isSuccess)
+        {
+            return BadRequest("Failed to process resume. Stale data or invalid timeline state.");
+        }
+
+        return Ok(new { Message = "Resume timeline successfully updated."});
+    }
 }
