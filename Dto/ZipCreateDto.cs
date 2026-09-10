@@ -6,7 +6,7 @@ public class ZipCreateDto
     public string? ZipName { get; set; } = string.Empty;
     public DateTime EffDateFrom { get; set; }
     public DateTime EffDateTo { get; set; }
-    public int CountyId { get; set; }
-    public int ZoId { get; set; }
-    public int DoId { get; set; }
+    public string CountyNo { get; set; } = string.Empty;
+    public string ZoNo { get; set; } = string.Empty;
+    public string DoNo { get; set; } = string.Empty;
 }
