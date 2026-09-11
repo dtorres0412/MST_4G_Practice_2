@@ -235,24 +235,16 @@ public class ZipService(AppDbContext context) : IZipService
 
             if (oriItem != null)
             {
-                bool isFoundInVitaeList = false;
-                foreach (var item in vitaeList)
-                {
-                    if (item.ZipId == oriItem.ZipId)
-                    {
-                        isFoundInVitaeList = true;
-                        break;
-                    }
-                }
+                bool isFoundInVitaeList = vitaeList.Any(item => item.ZipId == oriItem.ZipId);
 
-                if (isFoundInVitaeList == false)
+                if (!isFoundInVitaeList)
                 {
                     return false;
                 }
 
                 var zipRecordInDatabase = await context.Zip
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(z => z.ZipId == oriItem.ZipId);
+                    .FirstOrDefaultAsync(z => z.ZipId == oriItem.ZipId);                
 
                 if (zipRecordInDatabase == null)
                 {
@@ -267,6 +259,9 @@ public class ZipService(AppDbContext context) : IZipService
             DateTime maxDate = DateTime.SpecifyKind(maxDateUnspecified, DateTimeKind.Utc);
 
             string zipNo = newItem.ZipNo.Trim();
+            string countyNo = newItem.CountyNo.Trim();
+            string zoNo = newItem.ZoNo.Trim();
+            string doNo = newItem.DoNo.Trim();
 
             var activeZip = await context.Zip
                 .FirstOrDefaultAsync(z => z.ZipNo == zipNo && z.EffDateTo == maxDate);
@@ -279,33 +274,36 @@ public class ZipService(AppDbContext context) : IZipService
                 context.Entry(activeZip).State = EntityState.Detached;
             }
 
-            var newZip = new Zip();
-            newZip.ZipNo = zipNo;
-            newZip.ZipName = newItem.ZipName.Trim();
-            newZip.EffDateFrom = newStartDate;
-            newZip.EffDateTo = maxDate;
+            var newZip = new Zip
+            {
+                ZipNo = zipNo,
+                ZipName = newItem.ZipName.Trim(),
+                EffDateFrom = newStartDate,
+                EffDateTo = maxDate
+            };
 
             context.Zip.Add(newZip);
             await context.SaveChangesAsync();
 
-            var existingJunctions = await context.ZipJunction
-                .Where(zj => zj.ZipNo == zipNo)
-                .ToListAsync();
+            bool isJunctionExisting = await context.ZipJunction
+                .AnyAsync(zj => zj.ZipNo == zipNo 
+                            && zj.CountyNo == countyNo 
+                            && zj.ZoNo == zoNo 
+                            && zj.DoNo == doNo);
 
-            if (existingJunctions != null && existingJunctions.Count > 0)
+            if (!isJunctionExisting)
             {
-                context.ZipJunction.RemoveRange(existingJunctions);
+                var newJunction = new ZipJunction
+                {
+                    ZipNo = zipNo,
+                    CountyNo = countyNo,
+                    ZoNo = zoNo,
+                    DoNo = doNo
+                };
+
+                context.ZipJunction.Add(newJunction);
                 await context.SaveChangesAsync();
             }
-
-            var newJunction = new ZipJunction();
-            newJunction.ZipNo = zipNo;
-            newJunction.CountyNo = newItem.CountyNo.Trim();
-            newJunction.ZoNo = newItem.ZoNo.Trim();
-            newJunction.DoNo = newItem.DoNo.Trim();
-
-            context.ZipJunction.Add(newJunction);
-            await context.SaveChangesAsync();
 
             return true;
         }
