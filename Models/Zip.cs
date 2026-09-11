@@ -19,25 +19,5 @@ public class Zip
     [Column("eff_date_to")]
     public DateTime EffDateTo { get; set; }
 
-    [Column("county_id")]
-    public int CountyId { get; set; }
-
-    [Column("zo_id")]
-    public int ZoId { get; set; }
-
-    [Column("do_id")]
-    public int DoId { get; set; }
-
-    [Column("county_no")]
-    public string? CountyNo { get; set; }
-
-    [Column("zo_no")]
-    public string? ZoNo { get; set; }
-
-    [Column("do_no")]
-    public string? DoNo { get; set; }
-
-    public County? County { get; set; }
-    public Zo? Zo { get; set; }
-    public DistrictOffice? DistrictOffice { get; set; }
+    public ICollection<ZipJunction> ZipJunction { get; set; } = new List<ZipJunction>();
 }
