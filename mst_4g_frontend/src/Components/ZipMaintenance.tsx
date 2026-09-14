@@ -1,0 +1,156 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import { ZipSearchFilters, ZipFiltersState } from './ZipSearchFilters';
+import { ZipDataTable, ZipRecord } from './ZipDataTable';
+import { ZipPagination } from './ZipPagination';
+import { ZipResumeModal } from './ZipResumeModal';
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:7043/api/Zip';
+
+interface SearchApiResponse {
+  items: ZipRecord[];
+  totalCount: number;
+}
+
+const INITIAL_FILTERS: ZipFiltersState = {
+  zipNo: '',
+  zipName: '',
+  countyNo: '',
+  countyName: '',
+  zoNo: '',
+  zoName: '',
+  doNo: '',
+  doName: '',
+};
+
+export const ZipMaintenance = () => {
+  const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [tableData, setTableData] = useState<ZipRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const pageSize = 10;
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<ZipRecord | null>(null);
+  const [historyList, setHistoryList] = useState<ZipRecord[]>([]);
+
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const fetchZipData = useCallback(async (page = 1) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await axios.get<SearchApiResponse>(`${API_BASE_URL}/Search`, {
+        params: { ...filters, pageNumber: page, pageSize },
+      });
+      setTableData(data.items ?? []);
+      setTotalRecords(data.totalCount ?? 0);
+      setCurrentPage(page);
+    } catch (err) {
+      setError('Failed to load ZIP territory records.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, pageSize]);
+
+  const handleExport = async () => {
+    try {
+      const { data } = await axios.get(`${API_BASE_URL}/Export`, {
+        params: filters,
+        responseType: 'blob',
+      });
+      
+      const blobUrl = URL.createObjectURL(new Blob([data]));
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `Zip_Territory_Data_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      alert('Export failed. Please try again.');
+    }
+  };
+
+  const handleOpenResume = async (row: ZipRecord) => {
+    setSelectedRow(row);
+    try {
+      const { data } = await axios.get<ZipRecord[]>(`${API_BASE_URL}/History/${row.zipNo}`);
+      setHistoryList(data ?? []);
+      setIsModalOpen(true);
+    } catch (err) {
+      alert('Unable to fetch history for this ZIP record.');
+    }
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedRow(null);
+  };
+
+  const handleModalRefresh = () => {
+    handleModalClose();
+    fetchZipData(currentPage);
+  };
+
+  useEffect(() => {
+    fetchZipData(1);
+  }, []);
+
+  const totalPages = Math.ceil(totalRecords / pageSize);
+
+  return (
+    <div className="p-6 space-y-6 bg-white min-h-screen">
+      <div className="flex justify-between items-center border-b pb-4">
+        <h1 className="text-2xl font-bold text-gray-800">Zip Code Territory Management</h1>
+        <button
+          onClick={handleExport}
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow font-semibold"
+        >
+          Export Data Table
+        </button>
+      </div>
+
+      {error && (
+        <div className="p-3 bg-red-100 border border-red-300 text-red-700 rounded text-sm">
+          {error}
+        </div>
+      )}
+
+      <ZipSearchFilters
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onQuery={() => fetchZipData(1)}
+      />
+
+      <ZipDataTable
+        tableData={tableData}
+        loading={loading}
+        onOpenResume={handleOpenResume}
+      />
+
+      <ZipPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalRecords={totalRecords}
+        currentCount={tableData.length}
+        onPageChange={fetchZipData}
+      />
+
+      {isModalOpen && selectedRow && (
+        <ZipResumeModal
+          selectedZipRecord={selectedRow}
+          zipHistoryList={historyList}
+          onClose={handleModalClose}
+          onRefresh={handleModalRefresh}
+        />
+      )}
+    </div>
+  );
+};
