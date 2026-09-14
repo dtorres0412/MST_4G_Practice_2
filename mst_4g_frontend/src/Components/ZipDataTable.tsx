@@ -76,7 +76,7 @@ export const ZipDataTable = ({ tableData, loading, onOpenResume }: ZipDataTableP
                     onClick={() => onOpenResume(row)}
                     className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded text-xs font-semibold"
                   >
-                    Process Resume
+                    Edit
                   </button>
                 </td>
               </tr>
