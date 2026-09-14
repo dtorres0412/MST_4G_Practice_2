@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { ZipRecord } from './ZipDataTable';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:7043/api/Zip';
-
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5208/api/Zip';
 interface ZipResumeModalProps {
   selectedZipRecord: ZipRecord;
   zipHistoryList: ZipRecord[];
