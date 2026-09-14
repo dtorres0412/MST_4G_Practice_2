@@ -32,8 +32,6 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
-
 app.UseCors("AllowReactApp");
 
 app.UseAuthorization();
