@@ -3,9 +3,8 @@ import axios from 'axios';
 import { ZipSearchFilters, ZipFiltersState } from './ZipSearchFilters';
 import { ZipDataTable, ZipRecord } from './ZipDataTable';
 import { ZipPagination } from './ZipPagination';
-import { ZipResumeModal } from './ZipResumeModal';
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5208/api/Zip';
+import { ZipEditModule } from './ZipEditModule';
+import { API_BASE_URL } from '../config/api';
 
 interface SearchApiResponse {
   items: ZipRecord[];
@@ -23,19 +22,26 @@ const INITIAL_FILTERS: ZipFiltersState = {
   doName: '',
 };
 
+const PAGE_SIZE = 10;
+
+const downloadBlob = (data: BlobPart, filename: string) => {
+  const url = URL.createObjectURL(new Blob([data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
 export const ZipMaintenance = () => {
-  const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [filters, setFilters] = useState<ZipFiltersState>(INITIAL_FILTERS);
   const [tableData, setTableData] = useState<ZipRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-  const pageSize = 10;
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedRow, setSelectedRow] = useState<ZipRecord | null>(null);
-  const [historyList, setHistoryList] = useState<ZipRecord[]>([]);
+  const [editingRecord, setEditingRecord] = useState<ZipRecord | null>(null);
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -47,7 +53,7 @@ export const ZipMaintenance = () => {
     setError(null);
     try {
       const { data } = await axios.get<SearchApiResponse>(`${API_BASE_URL}/Search`, {
-        params: { ...filters, pageNumber: page, pageSize },
+        params: { ...filters, pageNumber: page, pageSize: PAGE_SIZE },
       });
       setTableData(data.items ?? []);
       setTotalRecords(data.totalCount ?? 0);
@@ -58,7 +64,7 @@ export const ZipMaintenance = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters, pageSize]);
+  }, [filters]);
 
   const handleExport = async () => {
     try {
@@ -66,44 +72,33 @@ export const ZipMaintenance = () => {
         params: filters,
         responseType: 'blob',
       });
-      
-      const blobUrl = URL.createObjectURL(new Blob([data]));
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `Zip_Territory_Data_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      link.click();
-      URL.revokeObjectURL(blobUrl);
+      const filename = `Zip_Territory_Data_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      downloadBlob(data, filename);
     } catch (err) {
       alert('Export failed. Please try again.');
     }
-  };
-
-  const handleOpenResume = async (row: ZipRecord) => {
-    setSelectedRow(row);
-    try {
-      const { data } = await axios.get<ZipRecord[]>(`${API_BASE_URL}/History/${row.zipNo}`);
-      setHistoryList(data ?? []);
-      setIsModalOpen(true);
-    } catch (err) {
-      alert('Unable to fetch history for this ZIP record.');
-    }
-  };
-
-  const handleModalClose = () => {
-    setIsModalOpen(false);
-    setSelectedRow(null);
-  };
-
-  const handleModalRefresh = () => {
-    handleModalClose();
-    fetchZipData(currentPage);
   };
 
   useEffect(() => {
     fetchZipData(1);
   }, []);
 
-  const totalPages = Math.ceil(totalRecords / pageSize);
+  const totalPages = Math.ceil(totalRecords / PAGE_SIZE);
+
+  if (editingRecord) {
+    return (
+      <div className="p-6 bg-white min-h-screen">
+        <ZipEditModule
+          record={editingRecord}
+          onBack={() => setEditingRecord(null)}
+          onSaveSuccess={() => {
+            setEditingRecord(null);
+            fetchZipData(currentPage);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 bg-white min-h-screen">
@@ -111,7 +106,7 @@ export const ZipMaintenance = () => {
         <h1 className="text-2xl font-bold text-gray-800">Zip Code Territory Management</h1>
         <button
           onClick={handleExport}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow font-semibold"
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow font-semibold transition"
         >
           Export Data Table
         </button>
@@ -132,7 +127,7 @@ export const ZipMaintenance = () => {
       <ZipDataTable
         tableData={tableData}
         loading={loading}
-        onOpenResume={handleOpenResume}
+        onEdit={(row) => setEditingRecord(row)}
       />
 
       <ZipPagination
@@ -142,15 +137,6 @@ export const ZipMaintenance = () => {
         currentCount={tableData.length}
         onPageChange={fetchZipData}
       />
-
-      {isModalOpen && selectedRow && (
-        <ZipResumeModal
-          selectedZipRecord={selectedRow}
-          zipHistoryList={historyList}
-          onClose={handleModalClose}
-          onRefresh={handleModalRefresh}
-        />
-      )}
     </div>
   );
 };
