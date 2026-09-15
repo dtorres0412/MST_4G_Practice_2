@@ -4,6 +4,7 @@ import { ZipSearchFilters, ZipFiltersState } from './ZipSearchFilters';
 import { ZipDataTable, ZipRecord } from './ZipDataTable';
 import { ZipPagination } from './ZipPagination';
 import { ZipEditModule } from './ZipEditModule';
+import { ZipCreateModule } from './ZipCreateModule';
 import { API_BASE_URL } from '../config/api';
 
 interface SearchApiResponse {
@@ -41,7 +42,9 @@ export const ZipMaintenance = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
+  
   const [editingRecord, setEditingRecord] = useState<ZipRecord | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -100,16 +103,39 @@ export const ZipMaintenance = () => {
     );
   }
 
+  if (isCreating) {
+    return (
+      <div className="p-6 bg-white min-h-screen">
+        <ZipCreateModule
+          onBack={() => setIsCreating(false)}
+          onSuccess={() => {
+            setIsCreating(false);
+            fetchZipData(1);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6 bg-white min-h-screen">
       <div className="flex justify-between items-center border-b pb-4">
         <h1 className="text-2xl font-bold text-gray-800">Zip Code Territory Management</h1>
-        <button
-          onClick={handleExport}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow font-semibold transition"
-        >
-          Export Data Table
-        </button>
+        
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setIsCreating(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow text-sm font-semibold transition"
+          >
+            + Add Zip Record
+          </button>
+          <button
+            onClick={handleExport}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow text-sm font-semibold transition"
+          >
+            Export Data Table
+          </button>
+        </div>
       </div>
 
       {error && (
