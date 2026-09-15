@@ -15,13 +15,16 @@ interface ZipSearchFiltersProps {
   filters: ZipFiltersState;
   onFilterChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onQuery: () => void;
+  onReset?: () => void;
 }
 
-const FILTER_FIELDS: Array<{
+interface FilterField {
   name: keyof ZipFiltersState;
   label: string;
   placeholder?: string;
-}> = [
+}
+
+const FILTER_FIELDS: FilterField[] = [
   { name: 'zipNo', label: 'ZIP No', placeholder: 'e.g. 10002' },
   { name: 'zipName', label: 'ZIP Name', placeholder: 'e.g. Manila' },
   { name: 'countyNo', label: 'County No' },
@@ -36,6 +39,7 @@ export const ZipSearchFilters = ({
   filters,
   onFilterChange,
   onQuery,
+  onReset,
 }: ZipSearchFiltersProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,16 +62,25 @@ export const ZipSearchFilters = ({
               value={filters[name]}
               onChange={onFilterChange}
               placeholder={placeholder}
-              className="w-full border p-2 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white transition"
+              className="w-full border p-2 rounded text-sm focus:ring-1 focus:ring-blue-500 outline-none bg-white transition"
             />
           </div>
         ))}
       </div>
 
-      <div className="flex justify-end pt-2">
+      <div className="flex justify-end space-x-2 pt-2">
+        {onReset && (
+          <button
+            type="button"
+            onClick={onReset}
+            className="px-4 py-2 border rounded text-sm text-gray-600 bg-white hover:bg-gray-100 font-medium transition"
+          >
+            Reset
+          </button>
+        )}
         <button
           type="submit"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow font-semibold transition"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded text-sm font-semibold shadow transition"
         >
           Query
         </button>
