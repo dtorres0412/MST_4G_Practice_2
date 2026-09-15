@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using MST_4G.Data;
 using MST_4G.Services;
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
