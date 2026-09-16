@@ -1,4 +1,5 @@
 import { ZipMaintenance } from './Components/ZipMaintenance';
+import './App.css';
 
 export default function App() {
   return (
