@@ -10,8 +10,43 @@ namespace MST_4G.Services;
 
 public class ZipService(AppDbContext context) : IZipService
 {
+
+    private static void ValidateZipBusinessRules(params (string? value, int maxLength)[] fields)
+    {
+        char[] forbiddenChars = ['^', '<', '>', '|', '&', '"', '\'', ','];
+
+        foreach (var (value, maxLength) in fields)
+        {
+            if (string.IsNullOrWhiteSpace(value)) continue;
+
+            string trimmedValue = value.Trim();
+
+            if (trimmedValue.IndexOfAny(forbiddenChars) >= 0)
+            {
+                throw new ArgumentException("B231002:en_此欄位不可使用特殊符號如(^,<,>,|,&,\",')");
+            }
+
+            if (trimmedValue.Length > maxLength)
+            {
+                throw new ArgumentException($"B231003:en_ 超過欄位最大字元長度{maxLength}");
+            }
+        }
+    }
+
     public async Task<PagedResult<ZipReadDto>> SearchZipsAsync(ZipSearchDto searchDto)
     {
+
+        ValidateZipBusinessRules(
+        (searchDto.ZipNo, 5),
+        (searchDto.ZipName, 20),
+        (searchDto.CountyNo, 8),
+        (searchDto.CountyName, 10),
+        (searchDto.ZoNo, 4),
+        (searchDto.ZoName, 20),
+        (searchDto.DoNo, 4),
+        (searchDto.DoName, 20)
+        );
+
         return await ApplyZipFilters(searchDto)
             .OrderBy(zj => zj.ZipNo)
             .Select(ToDto)
@@ -118,6 +153,15 @@ public class ZipService(AppDbContext context) : IZipService
 
     public async Task<ZipReadDto> CreateZipAsync(ZipCreateDto createDto)
     {
+
+        ValidateZipBusinessRules(
+        (createDto.ZipNo, 5),
+        (createDto.ZipName, 50),
+        (createDto.CountyNo, 8),
+        (createDto.ZoNo, 8),
+        (createDto.DoNo, 8)
+        );
+
         string zipNo = createDto.ZipNo.Trim();
 
         var zipMaster = await context.Zip.FirstOrDefaultAsync(z => z.ZipNo == zipNo);
@@ -160,6 +204,14 @@ public class ZipService(AppDbContext context) : IZipService
     {
         try
         {
+            ValidateZipBusinessRules(
+            (updateDto.ZipNo, 5),
+            (updateDto.ZipName, 50),
+            (updateDto.CountyNo, 8),
+            (updateDto.ZoNo, 8),
+            (updateDto.DoNo, 8)
+            );
+
             string zipNo = updateDto.ZipNo.Trim();
 
             var existingZip = await context.Zip.FirstOrDefaultAsync(z => z.ZipNo == zipNo);
