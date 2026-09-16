@@ -11,8 +11,15 @@ public class ZipController(IZipService zipService) : ControllerBase
     [HttpGet("search")]
     public async Task<ActionResult<IEnumerable<ZipReadDto>>> SearchZips([FromQuery] ZipSearchDto searchDto)
     {
-        var result = await zipService.SearchZipsAsync(searchDto);
-        return Ok(result);
+        try
+        {
+            var result = await zipService.SearchZipsAsync(searchDto);
+            return Ok(result);
+        } 
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpGet("{zipNo}")]
@@ -43,7 +50,7 @@ public class ZipController(IZipService zipService) : ControllerBase
 
             return CreatedAtAction(nameof(GetByZipNo), new { zipNo = result?.ZipNo }, result);
         }
-        catch (InvalidOperationException ex)
+        catch (ArgumentException ex)
         {
             return BadRequest(ex.Message);
         }
@@ -61,7 +68,7 @@ public class ZipController(IZipService zipService) : ControllerBase
 
             return Ok(result);
         }
-        catch (InvalidOperationException ex)
+        catch (ArgumentException ex)
         {
             return BadRequest(ex.Message);
         }
