@@ -31,8 +31,8 @@ const COLUMNS: Array<{
   label: string;
   render?: (row: ZipRecord) => React.ReactNode;
 }> = [
-  { key: 'zipNo', label: 'ZIP No', render: (row) => <span className="font-medium">{row.zipNo}</span> },
-  { key: 'zipName', label: 'ZIP Name', render: (row) => row.zipName },
+  { key: 'zipNo', label: 'Zip No', render: (row) => <span className="font-medium">{row.zipNo}</span> },
+  { key: 'zipName', label: 'Zip Name', render: (row) => row.zipName },
   { key: 'countyNo', label: 'County No', render: (row) => row.countyNo },
   { key: 'countyName', label: 'County Name', render: (row) => row.countyName ?? '-' },
   { key: 'zoNo', label: 'ZO No', render: (row) => row.zoNo },
@@ -48,8 +48,8 @@ export const ZipDataTable = ({ tableData, loading, onEdit }: ZipDataTableProps) 
 
   return (
     <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
-      <table className="min-w-full text-left text-sm">
-        <thead className="bg-gray-100 text-gray-700 font-bold border-b">
+      <table id="table" className="min-w-full text-left text-sm border-collapse border border-gray-300">
+        <thead className="bg-gray-100 text-gray-700 font-bold border-bold">
           <tr>
             {COLUMNS.map((col) => (
               <th key={col.key} className="p-3 border-r whitespace-nowrap">
