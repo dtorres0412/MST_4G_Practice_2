@@ -26,11 +26,11 @@ interface FormFieldConfig {
 }
 
 const FORM_FIELDS: FormFieldConfig[] = [
-  { name: 'zipNo', label: 'ZIP No', placeholder: 'e.g. 10005', required: true },
-  { name: 'zipName', label: 'ZIP Name', placeholder: 'e.g. Makati', required: true },
+  { name: 'zipNo', label: 'ZIP No', placeholder: 'e.g. 10001', required: true },
+  { name: 'zipName', label: 'ZIP Name', placeholder: 'e.g. Zip1', required: true },
   { name: 'effDateFrom', label: 'Effective Date From', type: 'date', required: true },
   { name: 'effDateTo', label: 'Effective Date To', type: 'date', required: true },
-  { name: 'countyNo', label: 'County No', placeholder: 'e.g. C001', required: true },
+  { name: 'countyNo', label: 'County No', placeholder: 'e.g. 48919245', required: true },
   { name: 'zoNo', label: 'ZO No', placeholder: 'e.g. Z101', required: true },
   { name: 'doNo', label: 'DO No', placeholder: 'e.g. D001', required: true },
 ];
