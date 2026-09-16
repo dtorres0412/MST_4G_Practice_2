@@ -52,22 +52,34 @@ export const ZipMaintenance = () => {
   };
 
   const fetchZipData = useCallback(async (page = 1) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data } = await axios.get<SearchApiResponse>(`${API_BASE_URL}/Search`, {
-        params: { ...filters, pageNumber: page, pageSize: PAGE_SIZE },
-      });
-      setTableData(data.items ?? []);
-      setTotalRecords(data.totalCount ?? 0);
-      setCurrentPage(page);
-    } catch (err) {
+  setLoading(true);
+  setError(null);
+  try {
+    const { data } = await axios.get<SearchApiResponse>(`${API_BASE_URL}/Search`, {
+      params: { ...filters, pageNumber: page, pageSize: PAGE_SIZE },
+    });
+    setTableData(data.items ?? []);
+    setTotalRecords(data.totalCount ?? 0);
+    setCurrentPage(page);
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      let rawMessage = typeof err.response.data === 'string'
+        ? err.response.data
+        : err.response.data.message || err.response.data.title || 'Failed to load ZIP territory records.';
+
+      if (rawMessage.includes('ArgumentException:')) {
+        rawMessage = rawMessage.split('ArgumentException:')[1].split(' at ')[0].trim();
+      }
+
+      setError(rawMessage);
+    } else {
       setError('Failed to load ZIP territory records.');
-      console.error(err);
-    } finally {
-      setLoading(false);
     }
-  }, [filters]);
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+}, [filters]);
 
   const handleExport = async () => {
     try {
