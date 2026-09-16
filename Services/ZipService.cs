@@ -35,22 +35,72 @@ public class ZipService(AppDbContext context) : IZipService
 
     public async Task<PagedResult<ZipReadDto>> SearchZipsAsync(ZipSearchDto searchDto)
     {
-
         ValidateZipBusinessRules(
-        (searchDto.ZipNo, 5),
-        (searchDto.ZipName, 20),
-        (searchDto.CountyNo, 8),
-        (searchDto.CountyName, 10),
-        (searchDto.ZoNo, 4),
-        (searchDto.ZoName, 20),
-        (searchDto.DoNo, 4),
-        (searchDto.DoName, 20)
+            (searchDto.ZipNo, 5),
+            (searchDto.ZipName, 20),
+            (searchDto.CountyNo, 8),
+            (searchDto.CountyName, 10),
+            (searchDto.ZoNo, 4),
+            (searchDto.ZoName, 20),
+            (searchDto.DoNo, 4),
+            (searchDto.DoName, 20)
         );
 
-        return await ApplyZipFilters(searchDto)
-            .OrderBy(zj => zj.ZipNo)
+        var zipQuery = context.Zip.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(searchDto.ZipNo))
+            zipQuery = zipQuery.Where(z => z.ZipNo.Contains(searchDto.ZipNo.Trim()));
+
+        if (!string.IsNullOrWhiteSpace(searchDto.ZipName))
+            zipQuery = zipQuery.Where(z => z.ZipName.Contains(searchDto.ZipName.Trim()));
+
+        if (!string.IsNullOrWhiteSpace(searchDto.CountyNo) ||
+            !string.IsNullOrWhiteSpace(searchDto.CountyName) ||
+            !string.IsNullOrWhiteSpace(searchDto.ZoNo) ||
+            !string.IsNullOrWhiteSpace(searchDto.ZoName) ||
+            !string.IsNullOrWhiteSpace(searchDto.DoNo) ||
+            !string.IsNullOrWhiteSpace(searchDto.DoName))
+        {
+            zipQuery = zipQuery.Where(z => context.ZipJunction.Any(zj =>
+                zj.ZipNo == z.ZipNo &&
+                (string.IsNullOrWhiteSpace(searchDto.CountyNo) || zj.CountyNo == searchDto.CountyNo.Trim()) &&
+                (string.IsNullOrWhiteSpace(searchDto.CountyName) || zj.County.CountyName.Contains(searchDto.CountyName.Trim())) &&
+                (string.IsNullOrWhiteSpace(searchDto.ZoNo) || zj.ZoNo == searchDto.ZoNo.Trim()) &&
+                (string.IsNullOrWhiteSpace(searchDto.ZoName) || zj.Zo.ZoName.Contains(searchDto.ZoName.Trim())) &&
+                (string.IsNullOrWhiteSpace(searchDto.DoNo) || zj.DoNo == searchDto.DoNo.Trim()) &&
+                (string.IsNullOrWhiteSpace(searchDto.DoName) || zj.DistrictOffice.DoName.Contains(searchDto.DoName.Trim()))
+            ));
+        }
+
+        int totalCount = await zipQuery.CountAsync();
+
+        var pagedZips = await zipQuery
+            .OrderBy(z => z.ZipNo)
+            .Skip((searchDto.PageIndex - 1) * searchDto.PageSize)
+            .Take(searchDto.PageSize)
+            .ToListAsync();
+
+        var zipNos = pagedZips.Select(z => z.ZipNo).ToList();
+
+        var junctionDetails = await context.ZipJunction.AsNoTracking()
+            .Where(zj => zipNos.Contains(zj.ZipNo))
             .Select(ToDto)
-            .ToPagedResultAsync(searchDto.PageIndex, searchDto.PageSize);
+            .ToListAsync();
+
+        var items = pagedZips.Select(z =>
+        {
+            var match = junctionDetails.FirstOrDefault(j => j.ZipNo == z.ZipNo);
+            return match ?? new ZipReadDto
+            {
+                ZipId = z.ZipId,
+                ZipNo = z.ZipNo,
+                ZipName = z.ZipName,
+                EffDateFrom = z.EffDateFrom,
+                EffDateTo = z.EffDateTo
+            };
+        }).ToList();
+
+        return new PagedResult<ZipReadDto>(items, totalCount, searchDto.PageIndex, searchDto.PageSize);
     }
 
     public async Task<ZipReadDto?> GetByZipNoAsync(string zipNo)
