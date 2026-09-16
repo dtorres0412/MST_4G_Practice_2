@@ -92,7 +92,6 @@ export const ZipEditModule = ({ record, onBack, onSaveSuccess }: ZipEditModulePr
     setError(null);
 
     try {
-      // Tumutugma sa [HttpDelete("{zipId:Int}")] ng C# controller
       await axios.delete(`${API_BASE_URL}/${record.zipId}`);
       onSaveSuccess();
     } catch (err: any) {
