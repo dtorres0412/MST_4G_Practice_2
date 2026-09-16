@@ -25,14 +25,14 @@ interface FilterField {
 }
 
 const FILTER_FIELDS: FilterField[] = [
-  { name: 'zipNo', label: 'ZIP No', placeholder: 'e.g. 10002' },
-  { name: 'zipName', label: 'ZIP Name', placeholder: 'e.g. Manila' },
-  { name: 'countyNo', label: 'County No' },
-  { name: 'countyName', label: 'County Name' },
+  { name: 'zipNo', label: 'ZIP No', placeholder: 'e.g. 10001' },
+  { name: 'zipName', label: 'ZIP Name', placeholder: 'e.g. Zip1' },
+  { name: 'countyNo', label: 'County No', placeholder: 'e.g. 48919245' },
+  { name: 'countyName', label: 'County Name', placeholder: 'e.g. CountyA'},
   { name: 'zoNo', label: 'ZO No', placeholder: 'e.g. Z101' },
-  { name: 'zoName', label: 'ZO Name' },
+  { name: 'zoName', label: 'ZO Name', placeholder: 'e.g. Zone1'},
   { name: 'doNo', label: 'DO No', placeholder: 'e.g. D001' },
-  { name: 'doName', label: 'DO Name' },
+  { name: 'doName', label: 'DO Name', placeholder: 'e.g. District1' },
 ];
 
 export const ZipSearchFilters = ({
