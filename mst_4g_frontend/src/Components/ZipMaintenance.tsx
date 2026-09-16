@@ -51,6 +51,11 @@ export const ZipMaintenance = () => {
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleResetFilters = () => {
+  setFilters(INITIAL_FILTERS);
+  fetchZipData(1);
+  };
+
   const fetchZipData = useCallback(async (page = 1) => {
   setLoading(true);
   setError(null);
@@ -160,6 +165,7 @@ export const ZipMaintenance = () => {
         filters={filters}
         onFilterChange={handleFilterChange}
         onQuery={() => fetchZipData(1)}
+        onReset={handleResetFilters}
       />
 
       <ZipDataTable
