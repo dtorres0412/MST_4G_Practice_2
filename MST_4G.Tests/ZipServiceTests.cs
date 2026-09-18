@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using MST_4G.Data;
@@ -11,51 +10,112 @@ using Xunit;
 
 namespace MST_4G.Tests;
 
-public class ZipServiceTests
+public class ZipServiceTests : IDisposable
 {
-    private async Task<AppDbContext> GetInMemoryDbContextAsync()
+    private readonly AppDbContext _context;
+    private readonly ZipService _service;
+
+    public static IEnumerable<object[]> GetNonExistentZipNumbers()
+    {
+        yield return new object[] { "9999" };
+        yield return new object[] { "9889" };
+        yield return new object[] { "0000" };
+    }
+
+    public static IEnumerable<object[]> GetInvalidZipIds()
+    {
+        yield return new object[] { 9999 };
+        yield return new object[] { 8888 };
+        yield return new object[] { 21 };
+     }
+
+    public static IEnumerable<object[]> DeleteZipIds()
+    {
+        yield return new object[] { 1 };
+        yield return new object[] { 24 };
+        yield return new object[] { 66 };
+     }
+
+    public static IEnumerable<object[]> GetForbiddenCharacters()
+    {
+        yield return new object[] { "^" };
+        yield return new object[] { "<" };
+        yield return new object[] { ">" };
+        yield return new object[] { "|" };
+        yield return new object[] { "&" };
+        yield return new object[] { "\"" };
+        yield return new object[] { "'" };
+        yield return new object[] { "," };
+    }
+
+    // ==========================================
+    // 1. SETUP
+    // ==========================================
+    public ZipServiceTests()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        var context = new AppDbContext(options);
-        await context.Database.EnsureCreatedAsync();
-        return context;
+        _context = new AppDbContext(options);
+        _context.Database.EnsureCreated();
+
+        // Seed Baseline Master Data
+        SeedTestData();
+
+        _service = new ZipService(_context);
     }
 
-    // ==========================================
-    // 1. GET BY ZIP NO TESTS
-    // ==========================================
-
-    [Fact]
-    public async Task GetByZipNoAsync_WhenZipExists_ReturnsCorrectDto()
+    private void SeedTestData()
     {
-        // Arrange
-        var context = await GetInMemoryDbContextAsync();
-
-        var zipMaster = new Zip { ZipId = 1, ZipNo = "10001", ZipName = "Manila", EffDateFrom = DateTime.UtcNow, EffDateTo = DateTime.UtcNow };
+        var zips = new List<Zip>
+        {
+            new Zip { ZipId = 1, ZipNo = "10001", ZipName = "Manila", EffDateFrom = DateTime.UtcNow, EffDateTo = new DateTime(9999, 12, 31) },
+            new Zip { ZipId = 24, ZipNo = "10024", ZipName = "Makati", EffDateFrom = DateTime.UtcNow, EffDateTo = new DateTime(9999, 12, 31) },
+            new Zip { ZipId = 66, ZipNo = "10066", ZipName = "Pasig", EffDateFrom = DateTime.UtcNow, EffDateTo = new DateTime(9999, 12, 31) }
+        };
         var county = new County { CountyNo = "C001", CountyName = "Metro Manila" };
         var zo = new Zo { ZoNo = "Z101", ZoName = "Zone 1" };
         var districtOffice = new DistrictOffice { DoNo = "D001", DoName = "District 1" };
 
-        context.ZipJunction.Add(new ZipJunction
+        _context.Zip.AddRange(zips);
+        _context.County.Add(county);
+        _context.Zo.Add(zo);
+        _context.DistrictOffice.Add(districtOffice);
+
+        _context.ZipJunction.Add(new ZipJunction
         {
             ZipNo = "10001",
             CountyNo = "C001",
             ZoNo = "Z101",
             DoNo = "D001",
-            Zip = zipMaster,
+            Zip = zips[0],
             County = county,
             Zo = zo,
             DistrictOffice = districtOffice
         });
-        await context.SaveChangesAsync();
 
-        var service = new ZipService(context);
+        _context.SaveChanges();
+    }
 
+    // ==========================================
+    // 2. TEARDOWN
+    // ==========================================
+    public void Dispose()
+    {
+        _context.Database.EnsureDeleted();
+        _context.Dispose();
+    }
+
+    // ==========================================
+    // 3. GET BY ZIP NO TESTS
+    // ==========================================
+
+    [Fact]
+    public async Task GetByZipNoAsync_WhenZipExists_ReturnsCorrectDto()
+    {
         // Act
-        var result = await service.GetByZipNoAsync(" 10001 "); // Pinapasa nang may whitespace para ma-test ang .Trim()
+        var result = await _service.GetByZipNoAsync(" 10001 ");
 
         // Assert
         Assert.NotNull(result);
@@ -64,36 +124,31 @@ public class ZipServiceTests
         Assert.Equal("Metro Manila", result.CountyName);
     }
 
-    [Fact]
-    public async Task GetByZipNoAsync_WhenZipDoesNotExist_ReturnsNull()
+    [Theory]
+    [MemberData(nameof(GetNonExistentZipNumbers))]
+    //Value from yield return { "9999" } Pass because it will be Null
+    //Value from yield return { "9889" } Pass because it will be Null
+    //Value from yield return { "0000" } Pass because it will be Null
+    //Value from yield return { "10001" } will fail because it was existing in the predefined data in the RAM DB.
+    public async Task GetByZipNoAsync_WhenZipDoesNotExist_ReturnsNull(string nonExistentZipNo)
+    // string nonExistentZipNo = "9999"
     {
-        // Arrange
-        var context = await GetInMemoryDbContextAsync();
-        var service = new ZipService(context);
-
         // Act
-        var result = await service.GetByZipNoAsync("99999");
+        var result = await _service.GetByZipNoAsync(nonExistentZipNo);
+        // var result = await _service.GetByZipNoAsync("9999");
 
         // Assert
         Assert.Null(result);
     }
 
     // ==========================================
-    // 2. CREATE ZIP TESTS
+    // 4. CREATE ZIP TESTS
     // ==========================================
 
     [Fact]
     public async Task CreateZipAsync_WhenMasterZipDoesNotExist_CreatesNewMasterAndJunction()
     {
         // Arrange
-        var context = await GetInMemoryDbContextAsync();
-
-        context.County.Add(new County { CountyNo = "C001", CountyName = "County A" });
-        context.Zo.Add(new Zo { ZoNo = "Z101", ZoName = "Zone A" });
-        context.DistrictOffice.Add(new DistrictOffice { DoNo = "D001", DoName = "District A" });
-        await context.SaveChangesAsync();
-
-        var service = new ZipService(context);
         var createDto = new ZipCreateDto
         {
             ZipNo = "10002",
@@ -106,41 +161,25 @@ public class ZipServiceTests
         };
 
         // Act
-        var result = await service.CreateZipAsync(createDto);
+        var result = await _service.CreateZipAsync(createDto);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal("10002", result.ZipNo);
         Assert.Equal("Makati", result.ZipName);
 
-        var savedZipMaster = await context.Zip.FirstOrDefaultAsync(z => z.ZipNo == "10002");
+        var savedZipMaster = await _context.Zip.FirstOrDefaultAsync(z => z.ZipNo == "10002");
         Assert.NotNull(savedZipMaster);
     }
 
     // ==========================================
-    // 3. UPDATE ZIP TESTS
+    // 5. UPDATE ZIP TESTS
     // ==========================================
 
     [Fact]
     public async Task UpdateZipAsync_WhenZipExists_UpdatesMasterAndReplacesJunction()
     {
         // Arrange
-        var context = await GetInMemoryDbContextAsync();
-
-        var existingZip = new Zip { ZipId = 1, ZipNo = "10001", ZipName = "Old Name", EffDateFrom = DateTime.UtcNow, EffDateTo = DateTime.UtcNow };
-        context.Zip.Add(existingZip);
-
-        var county = new County { CountyNo = "C001", CountyName = "County A" };
-        var zo = new Zo { ZoNo = "Z101", ZoName = "Zone A" };
-        var districtOffice = new DistrictOffice { DoNo = "D001", DoName = "District A" };
-        context.County.Add(county);
-        context.Zo.Add(zo);
-        context.DistrictOffice.Add(districtOffice);
-
-        context.ZipJunction.Add(new ZipJunction { ZipNo = "10001", CountyNo = "C001", ZoNo = "Z101", DoNo = "D001", Zip = existingZip, County = county, Zo = zo, DistrictOffice = districtOffice });
-        await context.SaveChangesAsync();
-
-        var service = new ZipService(context);
         var updateDto = new ZipUpdateDto
         {
             ZipNo = "10001",
@@ -153,13 +192,13 @@ public class ZipServiceTests
         };
 
         // Act
-        var result = await service.UpdateZipAsync(updateDto);
+        var result = await _service.UpdateZipAsync(updateDto);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal("Updated Manila Name", result.ZipName);
 
-        var updatedMasterInDb = await context.Zip.FirstAsync(z => z.ZipNo == "10001");
+        var updatedMasterInDb = await _context.Zip.FirstAsync(z => z.ZipNo == "10001");
         Assert.Equal("Updated Manila Name", updatedMasterInDb.ZipName);
     }
 
@@ -167,68 +206,61 @@ public class ZipServiceTests
     public async Task UpdateZipAsync_WhenZipDoesNotExist_ReturnsNull()
     {
         // Arrange
-        var context = await GetInMemoryDbContextAsync();
-        var service = new ZipService(context);
-        var updateDto = new ZipUpdateDto { ZipNo = "99999", ZipName = "Non Existent", CountyNo = "C001", ZoNo = "Z101", DoNo = "D001" };
+        var updateDto = new ZipUpdateDto 
+        { 
+            ZipNo = "99999", 
+            ZipName = "Non Existent", 
+            CountyNo = "C001", 
+            ZoNo = "Z101", 
+            DoNo = "D001" 
+        };
 
         // Act
-        var result = await service.UpdateZipAsync(updateDto);
+        var result = await _service.UpdateZipAsync(updateDto);
 
         // Assert
         Assert.Null(result);
     }
 
     // ==========================================
-    // 4. DELETE ZIP TESTS
+    // 6. DELETE ZIP TESTS
     // ==========================================
 
-    [Fact]
-    public async Task DeleteZipAsync_WhenZipIdExists_ReturnsTrueAndRemovesRecord()
+    [Theory]
+    [MemberData(nameof(DeleteZipIds))]
+    public async Task DeleteZipAsync_WhenZipIdExists_ReturnsTrueAndRemovesRecord(int deleteZipIds)
     {
-        // Arrange
-        var context = await GetInMemoryDbContextAsync();
-        var zipToDelete = new Zip { ZipId = 10, ZipNo = "10003", ZipName = "Pasig", EffDateFrom = DateTime.UtcNow, EffDateTo = DateTime.UtcNow };
-        context.Zip.Add(zipToDelete);
-        await context.SaveChangesAsync();
-
-        var service = new ZipService(context);
-
         // Act
-        bool result = await service.DeleteZipAsync(10);
+        bool result = await _service.DeleteZipAsync(deleteZipIds); // Deletes seeded ZipIds from the DeleteZipIds pre-made data
 
         // Assert
         Assert.True(result);
-        Assert.Null(await context.Zip.FindAsync(10));
+        Assert.Null(await _context.Zip.FindAsync(deleteZipIds));
     }
 
-    [Fact]
-    public async Task DeleteZipAsync_WhenZipIdDoesNotExist_ReturnsFalse()
+    [Theory]
+    [MemberData(nameof(GetInvalidZipIds))]
+    public async Task DeleteZipAsync_WhenZipIdDoesNotExist_ReturnsFalse(int invalidZipId)
     {
-        // Arrange
-        var context = await GetInMemoryDbContextAsync();
-        var service = new ZipService(context);
-
         // Act
-        bool result = await service.DeleteZipAsync(9999);
+        bool result = await _service.DeleteZipAsync(invalidZipId);
 
         // Assert
         Assert.False(result);
     }
 
     // ==========================================
-    // 5. EXPORT TO EXCEL TEST
+    // 7. EXPORT TO EXCEL TEST
     // ==========================================
 
     [Fact]
     public async Task ExportZipsToExcelAsync_ReturnsNonEmptyByteArray()
     {
         // Arrange
-        var context = await GetInMemoryDbContextAsync();
-        var service = new ZipService(context);
         var searchDto = new ZipSearchDto();
 
         // Act
-        var excelBytes = await service.ExportZipsToExcelAsync(searchDto);
+        var excelBytes = await _service.ExportZipsToExcelAsync(searchDto);
 
         // Assert
         Assert.NotNull(excelBytes);
@@ -236,16 +268,13 @@ public class ZipServiceTests
     }
 
     // ==========================================
-    // 6. PROCESS RESUME TESTS
+    // 8. PROCESS RESUME TESTS
     // ==========================================
 
     [Fact]
     public async Task ProcessResumeAsync_WhenOriItemNotInVitaeList_ReturnsFalse()
     {
         // Arrange
-        var context = await GetInMemoryDbContextAsync();
-        var service = new ZipService(context);
-
         var payload = new ZipProcessResumeDto
         {
             NewItem = new ZipCreateDto 
@@ -258,12 +287,12 @@ public class ZipServiceTests
                 EffDateFrom = DateTime.UtcNow,
                 EffDateTo = new DateTime(9999, 12, 31)
             },
-            OriItem = new ZipReadDto { ZipId = 5, ZipNo = "10001" },
+            OriItem = new ZipReadDto { ZipId = 1, ZipNo = "10001" },
             VitaeList = new List<ZipReadDto> { new ZipReadDto { ZipId = 99, ZipNo = "10001" } }
         };
 
         // Act
-        var result = await service.ProcessResumeAsync(payload);
+        var result = await _service.ProcessResumeAsync(payload);
 
         // Assert
         Assert.False(result);
@@ -273,21 +302,7 @@ public class ZipServiceTests
     public async Task ProcessResumeAsync_WhenValidResume_ReturnsTrueAndUpdatesDates()
     {
         // Arrange
-        var context = await GetInMemoryDbContextAsync();
-
         DateTime maxDate = DateTime.SpecifyKind(new DateTime(9999, 12, 31), DateTimeKind.Utc);
-        var activeZip = new Zip 
-        { 
-            ZipId = 5, 
-            ZipNo = "10001", 
-            ZipName = "Old Manila", 
-            EffDateFrom = DateTime.UtcNow.AddYears(-1), 
-            EffDateTo = maxDate 
-        };
-        context.Zip.Add(activeZip);
-        await context.SaveChangesAsync();
-
-        var service = new ZipService(context);
 
         var payload = new ZipProcessResumeDto
         {
@@ -295,44 +310,35 @@ public class ZipServiceTests
             { 
                 ZipNo = "10001", 
                 ZipName = "New Manila", 
-                CountyNo = "C01", 
-                ZoNo = "Z01", 
-                DoNo = "D01", 
+                CountyNo = "C001", 
+                ZoNo = "Z101", 
+                DoNo = "D001", 
                 EffDateFrom = DateTime.UtcNow 
             },
-            OriItem = new ZipReadDto { ZipId = 5, ZipNo = "10001" },
-            VitaeList = new List<ZipReadDto> { new ZipReadDto { ZipId = 5, ZipNo = "10001" } }
+            OriItem = new ZipReadDto { ZipId = 1, ZipNo = "10001" },
+            VitaeList = new List<ZipReadDto> { new ZipReadDto { ZipId = 1, ZipNo = "10001" } }
         };
 
         // Act
-        var result = await service.ProcessResumeAsync(payload);
+        var result = await _service.ProcessResumeAsync(payload);
 
         // Assert
         Assert.True(result);
 
-        var updatedActiveZip = await context.Zip.FindAsync(5);
+        var updatedActiveZip = await _context.Zip.FindAsync(1);
         Assert.NotNull(updatedActiveZip);
         Assert.NotEqual(maxDate, updatedActiveZip.EffDateTo);
     }
 
     // ==========================================
-    // 7. BUSINESS RULE VALIDATION TESTS (B231002 & B231003)
+    // 9. BUSINESS RULE VALIDATION TESTS (B231002 & B231003)
     // ==========================================
 
     [Theory]
-    [InlineData("^")]
-    [InlineData("<")]
-    [InlineData(">")]
-    [InlineData("|")]
-    [InlineData("&")]
-    [InlineData("\"")]
-    [InlineData("'")]
-    [InlineData(",")]
+    [MemberData(nameof(GetForbiddenCharacters))]
     public async Task CreateZipAsync_WhenInputHasForbiddenCharacters_ThrowsB231002(string forbiddenChar)
     {
         // Arrange
-        var context = await GetInMemoryDbContextAsync();
-        var service = new ZipService(context);
         var invalidDto = new ZipCreateDto
         {
             ZipNo = $"10{forbiddenChar}01",
@@ -343,7 +349,7 @@ public class ZipServiceTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.CreateZipAsync(invalidDto));
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateZipAsync(invalidDto));
         Assert.Contains("B231002", exception.Message);
     }
 
@@ -351,8 +357,6 @@ public class ZipServiceTests
     public async Task CreateZipAsync_WhenZipNoExceedsMaxLength_ThrowsB231003()
     {
         // Arrange
-        var context = await GetInMemoryDbContextAsync();
-        var service = new ZipService(context);
         var invalidDto = new ZipCreateDto
         {
             ZipNo = "100001", // 6 characters (> max 5)
@@ -363,7 +367,7 @@ public class ZipServiceTests
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.CreateZipAsync(invalidDto));
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateZipAsync(invalidDto));
         Assert.Contains("B231003", exception.Message);
     }
 
@@ -371,15 +375,13 @@ public class ZipServiceTests
     public async Task SearchZipsAsync_WhenFilterHasForbiddenCharacters_ThrowsB231002()
     {
         // Arrange
-        var context = await GetInMemoryDbContextAsync();
-        var service = new ZipService(context);
         var searchDto = new ZipSearchDto
         {
             ZipNo = "100^|"
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.SearchZipsAsync(searchDto));
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => _service.SearchZipsAsync(searchDto));
         Assert.Contains("B231002", exception.Message);
     }
 
@@ -387,15 +389,13 @@ public class ZipServiceTests
     public async Task SearchZipsAsync_WhenCountyNoExceedsMaxLength_ThrowsB231003()
     {
         // Arrange
-        var context = await GetInMemoryDbContextAsync();
-        var service = new ZipService(context);
         var searchDto = new ZipSearchDto
         {
             CountyNo = "111111111" // 9 characters (> max 8)
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.SearchZipsAsync(searchDto));
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => _service.SearchZipsAsync(searchDto));
         Assert.Contains("B231003", exception.Message);
     }
 }
