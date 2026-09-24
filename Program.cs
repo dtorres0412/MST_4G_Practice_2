@@ -11,6 +11,7 @@ builder.Services.AddControllers(); // The one that makes the process logic works
 builder.Services.AddOpenApi(); // The one that makes the documentation or blueprint.
 builder.Services.AddScoped<IZipService, ZipService>(); // Depdendency Injection container for the service files
 builder.Services.AddScoped<ICountyService, CountyService>();
+builder.Services.AddScoped<IZoService, ZoService>();
 
 // This registers the AppDbContext to Dependency Injection container using the PostgreSQL provider (Npgsql) and the connection details from the appsettings.json.
 builder.Services.AddDbContext<AppDbContext>(options =>
