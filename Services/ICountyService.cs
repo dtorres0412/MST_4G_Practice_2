@@ -4,6 +4,6 @@ namespace MST_4G.Services;
 
 public interface ICountyService
 {
-    Task<CountyReadDto?> GetByCountyNoAsync(string CountyNo);
+    Task<CountyReadDto?> GetByCountyNoAsync(int CountyNo);
     Task<CountyReadDto> CreateCountyAsync(CountyCreateDto createDto);
 }

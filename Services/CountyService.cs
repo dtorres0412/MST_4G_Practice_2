@@ -33,11 +33,11 @@ public class CountyService(AppDbContext context) : ICountyService
         }
     }
 
-        public async Task<CountyReadDto?> GetByCountyNoAsync(string countyNo)
+        public async Task<CountyReadDto?> GetByCountyNoAsync(int countyNo)
     {
         return await context.County
             .AsNoTracking()
-            .Where(c => c.CountyNo == countyNo.Trim())
+            .Where(c => c.CountyNo == countyNo)
             .Select(c => new CountyReadDto
             {
                 CountyNo = c.CountyNo,
@@ -50,12 +50,11 @@ public class CountyService(AppDbContext context) : ICountyService
     {
 
         ValidateCountyBusinessRules(
-        (createCountyDto.CountyNo, 8),
         (createCountyDto.CountyName, 50)
         );
 
-        string countyNo = createCountyDto.CountyNo.Trim();
-        string countyName = createCountyDto.CountyName.Trim();
+        int countyNo = createCountyDto.CountyNo;
+        string countyName = createCountyDto.CountyName?.Trim() ?? "";
 
         var existingCounty = await context.County
             .FirstOrDefaultAsync(c => c.CountyNo == countyNo);
