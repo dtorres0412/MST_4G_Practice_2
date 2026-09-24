@@ -9,7 +9,7 @@ namespace MST_4G.Controllers;
 public class CountyController(ICountyService countyService) : ControllerBase
 {
      [HttpGet("{countyNo}")]
-    public async Task<ActionResult<CountyReadDto>> GetByCountyNo(string countyNo)
+    public async Task<ActionResult<CountyReadDto>> GetByCountyNo(int countyNo)
     {
         var County = await countyService.GetByCountyNoAsync(countyNo);
 
