@@ -7,8 +7,8 @@ namespace MST_4G.Models;
 [PrimaryKey(nameof(ZipNo), nameof(CountyNo), nameof(ZoNo), nameof(DoNo))]
 public class ZipJunction
 {
-    public string ZipNo { get; set; } = string.Empty;
-    public string CountyNo { get; set; } = string.Empty;
+    public int ZipNo { get; set; }
+    public int CountyNo { get; set; }
     public string ZoNo { get; set; } = string.Empty;
     public string DoNo { get; set; } = string.Empty;
 
