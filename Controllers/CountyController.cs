@@ -8,7 +8,7 @@ namespace MST_4G.Controllers;
 [Route("api/[controller]")]
 public class CountyController(ICountyService countyService) : ControllerBase
 {
-     [HttpGet("{countyNo}")]
+     [HttpGet("{countyNo:int}")]
     public async Task<ActionResult<CountyReadDto>> GetByCountyNo(int countyNo)
     {
         var County = await countyService.GetByCountyNoAsync(countyNo);
