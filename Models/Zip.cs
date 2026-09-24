@@ -8,7 +8,7 @@ public class Zip
     public int ZipId { get; set; }
 
     [Column("zip_no")]
-    public string ZipNo { get; set; } = string.Empty;
+    public int ZipNo { get; set; }
 
     [Column("zip_name")]
     public string ZipName { get; set; } = string.Empty;
